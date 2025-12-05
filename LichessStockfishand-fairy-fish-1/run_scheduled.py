@@ -10,6 +10,12 @@ Runs from 7am CST to 3pm CST (8 hour window)
 import os
 import sys
 from lichess_bot import LichessBot
+from datetime import datetime, timedelta
+try:
+    # Python 3.9+ zoneinfo
+    from zoneinfo import ZoneInfo
+except Exception:
+    ZoneInfo = None
 
 
 def main():
@@ -34,8 +40,39 @@ def main():
     # Force using Stockfish (not Fairy Stockfish) for scheduled runs
     bot.use_fairy_stockfish = False
     
-    bot.winddown_hours = 5.5
-    bot.max_runtime_hours = 6.0
+    # Compute wall-clock schedule in America/Chicago timezone.
+    # Start is expected to be 05:45 America/Chicago when this script is launched by the workflow.
+    # Wind-down: 30 minutes before shutdown. Shutdown: 23:30 America/Chicago.
+    try:
+        if ZoneInfo is None:
+            raise RuntimeError("zoneinfo not available")
+
+        tz = ZoneInfo("America/Chicago")
+        now_local = datetime.now(tz)
+        # Target shutdown today at 23:30 local
+        shutdown_local = now_local.replace(hour=23, minute=30, second=0, microsecond=0)
+        if now_local >= shutdown_local:
+            # If it's already past shutdown, schedule to next day
+            shutdown_local = shutdown_local + timedelta(days=1)
+
+        runtime_seconds = (shutdown_local - now_local).total_seconds()
+        runtime_hours = max(0.0, runtime_seconds / 3600.0)
+
+        # Wind-down 30 minutes before shutdown
+        winddown_seconds = max(0.0, runtime_seconds - 30 * 60)
+        winddown_hours = winddown_seconds / 3600.0
+
+        bot.winddown_hours = winddown_hours
+        bot.max_runtime_hours = runtime_hours
+
+        print(f"Current local time (America/Chicago): {now_local.isoformat()}")
+        print(f"Scheduled shutdown local time: {shutdown_local.isoformat()}")
+        print(f"Scheduled runtime: {runtime_hours:.2f} hours (wind-down at {winddown_hours:.2f} hours)")
+    except Exception as e:
+        # Fall back to fixed 6-hour window if zoneinfo isn't available
+        print(f"Warning: failed to compute wall-clock schedule: {e}. Using default 6-hour runtime.")
+        bot.winddown_hours = 5.5
+        bot.max_runtime_hours = 6.0
     
     if bot.engine:
         bot.engine.configure({

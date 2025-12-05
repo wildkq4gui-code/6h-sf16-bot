@@ -3,7 +3,7 @@
 
 ## Deployment / Workflow
 
-The repository includes a GitHub Actions workflow that runs the scheduled bot daily at 13:00 UTC (07:00 CST when CST = UTC−6):
+The repository includes a GitHub Actions workflow that starts the scheduled bot daily at 11:45 UTC (05:45 America/Chicago local time):
 
 - Workflow file: `.github/workflows/lichess-bot.yml`
 - It expects a repository secret named `LICHESS_TOKEN` (your Lichess bot API token).
@@ -26,5 +26,5 @@ python3 LichessStockfishand-fairy-fish-1/run_scheduled.py
 ```
 
 Notes
-- GitHub Actions cron uses UTC. If your local timezone observes DST and you want a fixed local 07:00, let me know and I can add DST-aware scheduling options.
-- The bot will run for ~6 hours from startup (wind-down at 5.5h, full shutdown at 6h).
+- GitHub Actions cron uses UTC. The workflow is configured to start at 11:45 UTC which corresponds to 05:45 America/Chicago (CST/CDT transition is handled by the timezone conversion here in the code).
+- The bot calculates the runtime until 23:30 America/Chicago on the same day and will begin wind-down 30 minutes before shutdown (23:00). If zoneinfo is unavailable, it falls back to the previous 6-hour behavior.
