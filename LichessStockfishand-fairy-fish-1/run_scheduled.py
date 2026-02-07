@@ -67,8 +67,10 @@ def main():
     if env_engine and os.path.exists(env_engine):
         engine_path_to_use = env_engine
     else:
-        # Prefer Stockfish 17 binaries first, then 16.1, then bundled fallbacks
+        # Prefer Stockfish 18 first, then 17.1, then older versions, then bundled fallbacks
         candidate_names = [
+            os.path.join(script_dir, 'stockfish', 'stockfish-18'),
+            os.path.join(script_dir, 'stockfish', 'stockfish-17.1'),
             os.path.join(script_dir, 'stockfish', 'stockfish-17'),
             os.path.join(script_dir, 'stockfish', 'stockfish-17-ubuntu-x86-64'),
             os.path.join(script_dir, 'stockfish', 'stockfish-17-ubuntu-x86-64-avx2'),

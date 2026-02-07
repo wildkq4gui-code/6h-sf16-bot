@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Lichess Chess Bot using Stockfish 17.1
+Lichess Chess Bot using Stockfish 18/17.1
 Plays at 3000+ level with adaptive time management
 """
 
@@ -105,13 +105,11 @@ class LichessBot:
             info = self.engine.id
             print(f"✓ Engine initialized: {info['name']}")
 
-            # Check engine identity and warn if it does not look like Stockfish 16
+            # Check engine identity
             name_lower = info.get('name', '').lower() if isinstance(info.get('name', ''), str) else ''
             version_lower = info.get('version', '').lower() if isinstance(info.get('version', ''), str) else ''
             if 'stockfish' not in name_lower and 'stockfish' not in version_lower:
                 print(f"⚠ Warning: Engine does not identify as Stockfish (found: {info}). Continuing, but results may vary.")
-            elif '16' not in version_lower and '16' not in name_lower:
-                print(f"⚠ Warning: Engine does not appear to be Stockfish 16 (found: {info}). Continuing, but results may vary.")
             
             # Configure engine for high-level play
             self.engine.configure({

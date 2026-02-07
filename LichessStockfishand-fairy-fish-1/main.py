@@ -12,7 +12,7 @@ from lichess_bot import LichessBot
 
 def main():
     print("=" * 60)
-    print("Lichess Bot - Stockfish 16 Test Runner")
+    print("Lichess Bot - Stockfish 18/17.1 Test Runner")
     print("Settings: 100ms per move, Depth 30")
     print("=" * 60)
     
