@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 Lichess Bot - Scheduled Runner for GitHub Actions
-Runs from 7am CST to 3pm CST (8 hour window)
-- Normal operation for first 5.5 hours
-- Wind-down at 5.5 hours (plays one last game)
-- Shutdown at 6 hours
+Runs from 8am CST to 8pm CST (12 hour window)
+- Normal operation for first 11.5 hours
+- Wind-down at 11.5 hours (plays one last game)
+- Shutdown at 12 hours
 """
 
 import os
@@ -45,8 +45,10 @@ def main():
 
     print("=" * 60)
     print("Lichess Bot - GitHub Actions Scheduled Run")
-    print("Settings: 100ms per move, Depth 30")
-    print("Schedule: 5.5h wind-down, 6h shutdown")
+    print("Settings: 100ms per move, Depth 50")
+    print("Schedule: 11.5h wind-down, 12h shutdown")
+    print("Time Range: 8am to 8pm CST")
+    print("Mode: Single game at a time (prevents challenge acceptance while playing)")
     print("=" * 60)
     
     token = os.environ.get('LICHESS_TOKEN')
@@ -93,22 +95,22 @@ def main():
     
     bot.manual_mode = True
     bot.manual_time_limit = 0.1
-    bot.manual_depth = 35
+    bot.manual_depth = 50
     # Force using Stockfish (not Fairy Stockfish) for scheduled runs
     bot.use_fairy_stockfish = False
     
     # Compute wall-clock schedule in America/Chicago timezone.
-    # Start is expected to be 05:45 America/Chicago when this script is launched by the workflow.
-    # Wind-down: 30 minutes before shutdown. Shutdown: 23:30 America/Chicago.
+    # Runs from 8:00 AM to 8:00 PM (20:00) CST daily
+    # Wind-down starts at 7:30 PM (19:30), shutdown at 8:00 PM (20:00)
     try:
         if ZoneInfo is None:
             raise RuntimeError("zoneinfo not available")
 
         tz = ZoneInfo("America/Chicago")
         now_local = datetime.now(tz)
-        # Target shutdown today at 11:05 local, wind-down at 11:00
-        shutdown_local = now_local.replace(hour=11, minute=5, second=0, microsecond=0)
-        winddown_local = now_local.replace(hour=11, minute=0, second=0, microsecond=0)
+        # Target shutdown today at 8:00 PM (20:00) local, wind-down at 7:30 PM (19:30)
+        shutdown_local = now_local.replace(hour=20, minute=0, second=0, microsecond=0)
+        winddown_local = now_local.replace(hour=19, minute=30, second=0, microsecond=0)
         if now_local >= shutdown_local:
             # If it's already past shutdown, schedule to next day
             shutdown_local = shutdown_local + timedelta(days=1)
@@ -117,7 +119,7 @@ def main():
         runtime_seconds = (shutdown_local - now_local).total_seconds()
         runtime_hours = max(0.0, runtime_seconds / 3600.0)
 
-        # Wind-down at 11:00 (5 minutes before shutdown at 11:05)
+        # Wind-down at 7:30 PM (30 minutes before shutdown at 8:00 PM)
         winddown_seconds = (winddown_local - now_local).total_seconds()
         winddown_hours = max(0.0, winddown_seconds / 3600.0)
 
@@ -129,10 +131,10 @@ def main():
         print(f"Scheduled shutdown local time: {shutdown_local.isoformat()}")
         print(f"Scheduled runtime: {runtime_hours:.2f} hours (wind-down at {winddown_hours:.2f} hours)")
     except Exception as e:
-        # Fall back to fixed 6-hour window if zoneinfo isn't available
-        print(f"Warning: failed to compute wall-clock schedule: {e}. Using default 6-hour runtime.")
-        bot.winddown_hours = 5.5
-        bot.max_runtime_hours = 6.0
+        # Fall back to fixed 12-hour window if zoneinfo isn't available
+        print(f"Warning: failed to compute wall-clock schedule: {e}. Using default 12-hour runtime.")
+        bot.winddown_hours = 11.5
+        bot.max_runtime_hours = 12.0
     
     if bot.engine:
         bot.engine.configure({
@@ -146,6 +148,9 @@ def main():
     print(f"  - Search depth: {bot.manual_depth}")
     print(f"  - Threads: {min(8, os.cpu_count() or 4)}")
     print(f"  - Hash: 2048 MB")
+    print(f"\nGame constraints:")
+    print(f"  - Only one game at a time (bot declines challenges while playing)")
+    print(f"  - Memory-efficient depth: 50 with 2GB hash")
     print(f"\nSchedule:")
     print(f"  - Wind-down after: {bot.winddown_hours} hours")
     print(f"  - Shutdown after: {bot.max_runtime_hours} hours")
