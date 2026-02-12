@@ -2,7 +2,7 @@
 """
 Lichess Bot - Simple CLI Runner
 Runs Stockfish at 100ms per move with depth 30
-Scheduled to run for 6 hours with wind-down at 5.5 hours
+Scheduled to run for 12 hours with wind-down at 11.5 hours
 """
 
 import os
@@ -31,13 +31,8 @@ def main():
     # Force using Stockfish (not Fairy Stockfish) for CLI runs
     bot.use_fairy_stockfish = False
     
-    bot.winddown_hours = 5.5
-    bot.max_runtime_hours = 6.0
-    
-    bot.winding_down = True
-    bot.final_game_played = False
-    print("\n*** WIND-DOWN MODE ACTIVE ***")
-    print("Bot will finish current game and not accept new challenges.")
+    bot.winddown_hours = 11.5
+    bot.max_runtime_hours = 12.0
     
     if bot.engine:
         bot.engine.configure({

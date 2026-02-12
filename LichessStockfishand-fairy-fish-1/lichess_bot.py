@@ -39,8 +39,8 @@ class LichessBot:
         self.start_time = time.time()
         self.winding_down = False  # True when in wind-down mode (no new challenges)
         self.final_game_played = False  # True after playing the last game
-        self.max_runtime_hours = 6.0  # Shutdown after this many hours
-        self.winddown_hours = 5.5  # Start wind-down after this many hours
+        self.max_runtime_hours = 12.0  # Shutdown after this many hours
+        self.winddown_hours = 11.5  # Start wind-down after this many hours
         
         # Engine selection settings
         self.use_fairy_stockfish = False  # False = Stockfish, True = Fairy Stockfish
@@ -716,11 +716,6 @@ class LichessBot:
                     print("\nStop signal received, shutting down...")
                     break
                 
-                # If winding down and no current game and final game was played, exit
-                if self.winding_down and not self.current_game_id and self.final_game_played:
-                    print("\n✓ Final game completed. Shutting down bot...")
-                    break
-                
                 if event['type'] == 'challenge':
                     challenge = event['challenge']
                     challenger = challenge['challenger']['name']
@@ -782,8 +777,8 @@ class LichessBot:
                         self.final_game_played = True
                         runtime = self.get_runtime_hours()
                         print(f"\n✓ Final game completed at {runtime:.2f}h runtime")
-                        print("Bot will shut down now...")
-                        break
+                        # Don't break yet - let the bot continue until max_runtime_hours is reached
+                        # The schedule check at the top of the loop will handle shutdown
                     
                     if auto_challenge_bots and not self.current_game_id and not self.winding_down:
                         print("\n⏱ Waiting 3 seconds before challenging next bot...")
