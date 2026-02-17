@@ -247,16 +247,12 @@ class LichessBot:
     
     @property
     def supported_variants(self) -> Set[str]:
-        """Get supported variants based on current engine."""
-        if self.use_fairy_stockfish:
-            # Fairy Stockfish supports all variants
-            return {
-                'standard', 'crazyhouse', 'chess960', 'kingOfTheHill', 
-                'threeCheck', 'antichess', 'atomic', 'horde', 'racingKings'
-            }
-        else:
-            # Regular Stockfish only supports standard and chess960
-            return {'standard', 'chess960'}
+        """Get supported variants - all variants supported when Fairy Stockfish is available."""
+        # All variants are now supported with auto-switching to Fairy Stockfish
+        return {
+            'standard', 'crazyhouse', 'chess960', 'kingOfTheHill', 
+            'threeCheck', 'antichess', 'atomic', 'horde', 'racingKings'
+        }
     
     def get_engine_settings(self) -> dict:
         """Get current engine settings."""
@@ -282,7 +278,10 @@ class LichessBot:
     def get_time_limit(self, game_state: dict, bot_is_white: bool, initial: float, increment: float) -> Tuple[float, int]:
         """
         Calculate adaptive time limit based on game time control.
-        Optimized for instant and accurate play in 1+0 (60 second) bullet games.
+        Uses fixed thinking times based on time control categories:
+        - Hyperbullet to 3+0: 0.1 seconds
+        - 4+0 to 10+5: 0.5 seconds
+        - 15+0 and up: 5.0 seconds max
         If manual mode is enabled, uses manual settings instead.
         """
         # Use manual settings if manual mode is enabled
@@ -297,35 +296,33 @@ class LichessBot:
             moves_str = game_state.get('moves', '')
             moves_played = len(moves_str.split()) if moves_str else 0
             
-            if initial <= 60 and increment == 0:
-                time_limit = min(0.84, time_left * 0.01)
+            # Time control based strategy
+            # Hyperbullet to 3+0: minimal thinking
+            if initial <= 3:
+                time_limit = 0.1
+                depth = 20
+            # 4+0 to 10+5: moderate thinking (use increment in calculation too)
+            elif initial <= 10 and increment <= 5:
+                time_limit = 0.5
                 depth = 30
-            elif initial <= 60:
-                time_limit = min(0.86, time_left * 0.01)
-                depth = 30
-            elif initial + increment * 40 <= 180:
-                time_limit = min(0.9, time_left * 0.015)
-                depth = 45
-            elif initial + increment * 40 <= 480:
-                time_limit = min(2.0, time_left * 0.03)
+            # Medium blitz/rapid (11 to 14 seconds initial)
+            elif initial <= 14:
+                time_limit = min(1.5, time_left * 0.02)
                 depth = 35
-            elif initial + increment * 40 <= 900:
-                time_limit = min(5.0, time_left * 0.04)
-                depth = 35
+            # 15+0 and up: maximum thinking time (5 seconds)
             else:
-                time_limit = min(15.0, time_left * 0.05)
-                depth = 35
+                time_limit = min(5.0, time_left * 0.04)
+                depth = 40
             
+            # Opening adjustment for bullet games
             if moves_played < 12 and initial <= 60:
-                time_limit = max(time_limit * 0.85, 0.82)
-            
-            time_limit = max(0.82, time_limit)
+                time_limit = max(time_limit * 0.85, 0.1)
             
             return time_limit, depth
             
         except Exception as e:
             print(f"Error calculating time limit: {e}")
-            return 3.88, 45
+            return 0.5, 30
     
     def make_move(self, game_id: str, game_state: dict, bot_is_white: bool, initial: float, increment: float, variant: str = 'standard') -> Optional[str]:
         """Calculate and make the best move."""
@@ -774,12 +771,11 @@ class LichessBot:
                         print(f"  Declining: {challenger} is blocked")
                         self.decline_challenge(challenge['id'], reason="generic")
                     elif variant in self.supported_variants:
-                        # Check if we're using the right engine for this variant
+                        # Auto-enable Fairy Stockfish for non-standard variants
                         if variant != 'standard' and not self.use_fairy_stockfish:
-                            print(f"  Declining: {variant} requires Fairy Stockfish (currently using Stockfish)")
-                            self.decline_challenge(challenge['id'], reason="variant")
-                        else:
-                            self.accept_challenge(challenge['id'])
+                            print(f"  Auto-enabling Fairy Stockfish for {variant} variant")
+                            self.set_engine_settings(use_fairy_stockfish=True)
+                        self.accept_challenge(challenge['id'])
                     else:
                         print(f"  Declining: Variant {variant} not supported")
                         self.decline_challenge(challenge['id'], reason="variant")
