@@ -34,6 +34,7 @@ class LichessBot:
         self.should_stop = False
         self.blocklist: Set[str] = set()
         self.challenge_accepted = False  # Track if we've accepted a challenge waiting to start
+        self.current_arena_id: Optional[str] = None  # Track if we're in an arena game
         
         # Scheduling settings
         self.start_time = time.time()
@@ -453,6 +454,15 @@ class LichessBot:
         
         return (board.turn == chess.WHITE) == bot_is_white
     
+    def is_arena_game(self, game_event: dict) -> Tuple[bool, Optional[str]]:
+        """Check if a game is part of an arena/tournament.
+        
+        Returns:
+            Tuple[bool, Optional[str]]: (is_arena, tournament_id)
+        """
+        tournament_id = game_event.get('tournament')
+        return bool(tournament_id), tournament_id
+    
     def handle_game(self, game_id: str):
         """Handle a single game."""
         try:
@@ -466,12 +476,21 @@ class LichessBot:
             increment = 0.0
             chat_sent = False
             variant = 'standard'
+            is_arena = False
             
             for event in self.client.bots.stream_game_state(game_id):
                 if event['type'] == 'gameFull':
                     variant = event.get('variant', {}).get('key', 'standard')
                     print(f"Game started: {event['white']['name']} vs {event['black']['name']}")
                     print(f"Variant: {variant}")
+                    
+                    # Check if this is an arena game
+                    is_arena, tournament_id = self.is_arena_game(event)
+                    if is_arena:
+                        print(f"🏆 ARENA DETECTED (Tournament ID: {tournament_id})")
+                        self.current_arena_id = tournament_id
+                        self.arena_mode = True
+                        print(f"🛑 Arena mode enabled - no challenges will be accepted or sent")
                     
                     clock = event.get('clock', {})
                     initial = clock.get('initial', 180000) / 1000
@@ -511,6 +530,12 @@ class LichessBot:
                     user = event.get('username', 'Unknown')
                     text = event.get('text', '')
                     print(f"Chat [{user}]: {text}")
+            
+            # Reset arena mode when game ends
+            if is_arena:
+                self.arena_mode = False
+                self.current_arena_id = None
+                print(f"✅ Arena game ended - arena mode disabled, resuming normal operations")
             
             self.current_game_id = None
                     

@@ -25,6 +25,18 @@ chmod +x LichessStockfishand-fairy-fish-1/stockfish/stockfish-ubuntu-x86-64-avx2
 python3 LichessStockfishand-fairy-fish-1/run_scheduled.py
 ```
 
+## Arena Support 🏆
+
+The bot now has **automatic arena mode**! When your bot joins a Lichess arena:
+
+- ✅ Automatically detects arena games
+- 🛑 Stops accepting challenges from others
+- 🛑 Stops sending new challenges
+- 🏆 Focuses entirely on playing in the arena
+- ✅ Resumes normal operations when the arena ends
+
+**No configuration needed** - it works automatically! See [ARENA_MODE_GUIDE.md](ARENA_MODE_GUIDE.md) for details.
+
 Notes
 - GitHub Actions cron uses UTC. The workflow is configured to start at 12:00 UTC which corresponds to 06:00 America/Chicago (CST/CDT transition is handled by the timezone conversion here in the code).
 - The bot calculates the runtime until 11:05 America/Chicago on the same day and will begin wind-down at 11:00 (finishing any current game). If zoneinfo is unavailable, it falls back to a default behavior.
